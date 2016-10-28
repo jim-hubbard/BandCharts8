@@ -99,29 +99,39 @@ class DataParser {
 
                         //print ("Chord \(chord.chord) Above Char \(chord.chordAboveChar) Chord Abv Size \(chord.chordAboveCharSize) Chord Width \(chord.chordWidth)")
                         
-                        let chString = NSMutableAttributedString(string: chord.chord, attributes: chordAttr)
+                        let chString = NSMutableAttributedString(string: chord.chord) //, attributes: chordAttr)
                         //chString.append(space)
                         
                         //Insert the chord into the line and set the attributes
                         
                         //THIS IS WRONG - IT IS INSERTING AFTER THE CHORD AND SHOULD BE BEFORE
                         //MAYBE SHOULD SET THE CHORDABOVECHAR (-1)?????
+                        //print (chord.chordAboveChar)
+                        //print (chString)
                         mString.insert(chString, at: chord.chordAboveChar)
                         
                         
-                        //print (chString)
+                        
+                        
+                        
                         //Set the attribute for the chord - Font and baseline (all the characters)
-                        mString.addAttributes([NSBaselineOffsetAttributeName:25,NSFontAttributeName:chordFont], range: NSRange(location:chord.chordAboveChar,length:chord.chord.characters.count))
+                        //mString.addAttributes([NSBaselineOffsetAttributeName:25,NSFontAttributeName:chordFont], range: NSRange(location:chord.chordAboveChar,length:chord.chord.characters.count))
                         
                         //NO CHORD KERNING
                         //Set the attributes for the chord - Kerning (Just the first character)
                         //mString.addAttributes([NSKernAttributeName:-chord.chordWidth], range: NSRange(location:chord.chordAboveChar+1,length:1))
                         
-                        let raisedLetter = chord.chordAboveChar + chord.chord.characters.count
+                        let raisedLetter = chord.chordAboveChar // + chord.chord.characters.count
+                        let lastRaisedLetter = chord.chordAboveChar + chord.chord.characters.count - 1
                         //print ("Raised Letters \(raisedLetter)")
                         //print ("Chord Width \(chord.chordWidth)")
                         //Add the kerning adjustment to the remainder of the line after the chord
-                        mString.addAttributes([NSKernAttributeName:-chord.chordWidth,NSFontAttributeName:chordFont,NSBaselineOffsetAttributeName:25], range: NSRange(location:raisedLetter-1,length:1))
+                        //mString.addAttributes([NSKernAttributeName:-chord.chordWidth,NSFontAttributeName:chordFont,NSBaselineOffsetAttributeName:25], range: NSRange(location:raisedLetter-1,length:1))
+
+                        //Let try all of the attribute at once
+                        mString.addAttributes([NSFontAttributeName:chordFont,NSBaselineOffsetAttributeName:25], range: NSRange(location:raisedLetter,length:chord.chord.characters.count))
+                        mString.addAttributes([NSKernAttributeName:-chord.chordWidth], range: NSRange(location:lastRaisedLetter,length:1))
+                        
                         
                     }
                     
@@ -235,8 +245,8 @@ class DataParser {
                         let vChord = chordName //NO - PUT A SPACE IN FRONT OF THE CHORD ?????
                         vChordWidth = SizeOfString(myString: vChord,font: chordFont)
 
-                        
-                        let currentChord = LyricChords(chord: vChord, chordAboveChar: vChordAboveChar,chordAboveCharSize: vChordAboveCharSize ,chordWidth: vChordWidth,chordPosition: vChordPosition, chordEndPosition:vChordEndPosition)
+                        //Subtract on from the vChordAboceChar to force the insert before the character above
+                        let currentChord = LyricChords(chord: vChord, chordAboveChar: vChordAboveChar-1,chordAboveCharSize: vChordAboveCharSize ,chordWidth: vChordWidth,chordPosition: vChordPosition, chordEndPosition:vChordEndPosition)
                         
                         chords.append(currentChord)
                         inChordBuild = false
@@ -247,14 +257,17 @@ class DataParser {
                         
                     } else { //Create the chord name, add all the charaters between [ and ] (or a space)
                         chordName.append(chr)
-                        vChordAboveChar += 1
                     }
                 }else { // Not building a chord
                     if chr == "[" {
                         inChordBuild = true
                         vPreviousChordEndPosition = vChordEndPosition
                         vChordPosition = SizeOfString(myString: lyricLine,font: lyricFont) //for now
+                        //Need to add one to the location to account for the single character space take up by the chord
+                        vChordAboveChar += 1
+                        
                     }else {// Here is where we create the unformatted lyrics (no chords)
+                        //Need to add one to the location to account for each character
                         vChordAboveChar += 1
                         lyricLine.append(chr)
                     }
