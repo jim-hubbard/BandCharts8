@@ -20,14 +20,15 @@ class ViewController: NSViewController {
 
 
         
-        txtSong.attributedStringValue = parser.getLyrics()
+
         
         
         //Clear the Viewer and reset the viewer
         let range = NSMakeRange(0, 0)
         txtViewSong.textStorage!.mutableString.setString("")
         //txtViewSong.typingAttributes = attributes as! [String : AnyObject]
-        txtViewSong.insertText(parser.getLyricsStream(),replacementRange:range)
+        //txtViewSong.insertText(parser.getLyricsStream(),replacementRange:range)
+        txtViewSong.insertText(parser.getLyrics(withAttributes: false),replacementRange:range)
         txtViewSong.moveToBeginningOfDocument(nil)
         
         
@@ -39,6 +40,8 @@ class ViewController: NSViewController {
         //txtViewSong.addSubview(textViewChords)
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         
+        
+        txtSong.attributedStringValue = parser.getLyrics(withAttributes: true)
         
     }
     

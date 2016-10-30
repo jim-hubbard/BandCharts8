@@ -69,17 +69,17 @@ class LyricChords {
     fileprivate(set) var chordAboveChar: Int
     fileprivate(set) var chordAboveCharSize: CGFloat
     fileprivate(set) var chordWidth: CGFloat
-    fileprivate(set) var chordPosition: CGFloat
-    fileprivate(set) var chordEndPosition: CGFloat
+    var nextChordClose: Bool
     
-    init(chord:String, chordAboveChar:Int, chordAboveCharSize: CGFloat, chordWidth: CGFloat, chordPosition:CGFloat,chordEndPosition:CGFloat) {
+
+    
+    init(chord:String, chordAboveChar:Int, chordAboveCharSize: CGFloat, chordWidth: CGFloat, nextChordClose:Bool) {
         
         self.chord = chord
         self.chordAboveChar = chordAboveChar
         self.chordAboveCharSize = chordAboveCharSize
         self.chordWidth = chordWidth
-        self.chordPosition = chordPosition
-        self.chordEndPosition = chordEndPosition
+        self.nextChordClose = nextChordClose
 
         
     }

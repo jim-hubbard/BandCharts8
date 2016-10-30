@@ -11,8 +11,8 @@ import Cocoa
 
 //Calibri
 
-let chordFont: NSFont = GetAFont("Arial", Size: "18")
-let lyricFont: NSFont = GetAFont("Arial", Size: "24")
+let chordFont: NSFont = GetAFont("Arial", Size: "16")
+let lyricFont: NSFont = GetAFont("Arial", Size: "20")
 
 class DataParser {
 
@@ -36,6 +36,7 @@ class DataParser {
             
             let (chords, justWords) = self.seperateChordsFromLyrics(vUnformatedLyric)
             let words = self.seperateWordsFromLyric(_myLyric: justWords)
+            self.setChordCloseFlag()
             
             let currentLyric = LyricLine(lineType: vLineType, lineUnformated: vUnformatedLyric,lineFormated: justWords, lineChords: chords, lineWords: words)
             self.lyrics.append(currentLyric)
@@ -56,7 +57,7 @@ class DataParser {
         
         for data in lyrics {
          
-            mString = NSMutableAttributedString(string: data.lineUnformated, attributes: lyricAttr)
+            mString = NSMutableAttributedString(string: data.lineFormated, attributes: lyricAttr)
             for (x ,chr) in mString.string.characters.enumerated() {
                 
             
@@ -65,7 +66,7 @@ class DataParser {
             
             
             
-            
+
             returnLyrics.append(mString)
             returnLyrics.append(lineFeed)
             
@@ -74,12 +75,14 @@ class DataParser {
         return returnLyrics
     }
     
-    func getLyrics() -> NSAttributedString {
+    func getLyrics(withAttributes: Bool) -> NSAttributedString {
         
         let lineFeed: NSAttributedString = NSAttributedString(string: "\n")
         let space: NSAttributedString = NSAttributedString(string: " ")
         let returnLyrics = NSMutableAttributedString()
         var mString: NSMutableAttributedString!
+        
+        var vLastChordPosition = -1
         
         
         for data in lyrics {
@@ -89,11 +92,10 @@ class DataParser {
                 
             case .Lyrics:
                 
-                
+                //Set the string to the unformatted line
+                mString = NSMutableAttributedString(string: data.lineFormated, attributes: lyricAttr)
+                var vChordOffset = 0 //Used to adjust chord position in case spacess are needed
                 if data.lineChords.count > 0 { //Add the chords back into the lyrics
-                
-                    //Set the string to the unformatted line
-                    mString = NSMutableAttributedString(string: data.lineFormated, attributes: lyricAttr)
                     
                     for chord in data.lineChords {
 
@@ -102,18 +104,30 @@ class DataParser {
                         let chString = NSMutableAttributedString(string: chord.chord) //, attributes: chordAttr)
                         //chString.append(space)
                         
+                        let raisedLetter = chord.chordAboveChar // + chord.chord.characters.count
+                        let lastRaisedLetter = chord.chordAboveChar + chord.chord.characters.count - 1
+                        
+            
                         //Insert the chord into the line and set the attributes
                         
-                        //THIS IS WRONG - IT IS INSERTING AFTER THE CHORD AND SHOULD BE BEFORE
-                        //MAYBE SHOULD SET THE CHORDABOVECHAR (-1)?????
-                        //print (chord.chordAboveChar)
-                        //print (chString)
-                        mString.insert(chString, at: chord.chordAboveChar)
+                        //This is for testing only
+                        let aboveChord = (subStringByRange(myString: mString.string, begin: chord.chordAboveChar + vChordOffset, length: 1))
                         
-                        
-                        
-                        
-                        
+                        //If you are at the end of the lyric line chords need to be appended not inserted
+                        if mString.length < chord.chordAboveChar + vChordOffset {
+                            mString.append(chString)
+                        } else {
+                            mString.insert(chString, at: chord.chordAboveChar + vChordOffset)
+                        }
+
+                        print ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                        print ("Chord \(chord.chord)")
+                        print ("Chord Close \(chord.nextChordClose)")
+                        print ("mString Length \(mString.length)")
+                        print ("Chord Above \(chord.chordAboveChar)")
+                        print ("Chord Above Letter \(aboveChord)")
+                        print ("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
                         //Set the attribute for the chord - Font and baseline (all the characters)
                         //mString.addAttributes([NSBaselineOffsetAttributeName:25,NSFontAttributeName:chordFont], range: NSRange(location:chord.chordAboveChar,length:chord.chord.characters.count))
                         
@@ -121,21 +135,39 @@ class DataParser {
                         //Set the attributes for the chord - Kerning (Just the first character)
                         //mString.addAttributes([NSKernAttributeName:-chord.chordWidth], range: NSRange(location:chord.chordAboveChar+1,length:1))
                         
-                        let raisedLetter = chord.chordAboveChar // + chord.chord.characters.count
-                        let lastRaisedLetter = chord.chordAboveChar + chord.chord.characters.count - 1
-                        //print ("Raised Letters \(raisedLetter)")
+                        
+
+                        
+
+                        
+
+                        //print ("Lyric Length \(mString.length)")
+                        //print ("Raised Letters \(raisedLetter,length:chord.chord.characters.count)")
+                        
                         //print ("Chord Width \(chord.chordWidth)")
                         //Add the kerning adjustment to the remainder of the line after the chord
                         //mString.addAttributes([NSKernAttributeName:-chord.chordWidth,NSFontAttributeName:chordFont,NSBaselineOffsetAttributeName:25], range: NSRange(location:raisedLetter-1,length:1))
+                        if withAttributes {
+                            //Let try all of the attribute at once
+                            mString.addAttributes([NSFontAttributeName:chordFont,NSBaselineOffsetAttributeName:25, NSForegroundColorAttributeName: NSColor.red], range: NSRange(location:raisedLetter + vChordOffset,length:chord.chord.characters.count))
+                            //Need to add the kerning adjustment right after the last character of the chord
+                            mString.addAttributes([NSKernAttributeName:-chord.chordWidth], range: NSRange(location:lastRaisedLetter + vChordOffset,length:1))
+                        } //End with Atrtribute
+                        
+                        
+                        if chord.nextChordClose {
 
-                        //Let try all of the attribute at once
-                        mString.addAttributes([NSFontAttributeName:chordFont,NSBaselineOffsetAttributeName:25], range: NSRange(location:raisedLetter,length:chord.chord.characters.count))
-                        mString.addAttributes([NSKernAttributeName:-chord.chordWidth], range: NSRange(location:lastRaisedLetter,length:1))
+                            let (vSpaces, vIntSpaces) = self.spacesNeeded(len:chord.chordWidth)
+                            mString.insert(NSAttributedString(string:(vSpaces)), at: raisedLetter+1)
+                            print ("Inserting \(vIntSpaces) at \(raisedLetter+1)")
+                            vChordOffset += vIntSpaces
+                        }
                         
-                        
+                        //Hold the previous chord position
+                        vLastChordPosition = chord.chordAboveChar
                     }
-                    
-                    
+                 
+
                     
                     
                 }
@@ -164,11 +196,135 @@ class DataParser {
         
     }
 
+        
+    func seperateChordsFromLyrics(_ myLyric: String) -> (Array<LyricChords>, String) {
+        
+            var inChordBuild = false
+            var chordName = ""
+            var lyricLine = ""
+            var chords  = [LyricChords]()
+        
+            var vChordAboveChar: Int = 0
+            var vNextChordPosition :Int = 0 //Holder for the chord position upon discovery
+            //var vChordAboveCharSize:CGFloat = 0
+            var vChordWidth:CGFloat = 0
+            var vLastChordPosition = -1
+
+
+
+            for chr in myLyric.characters {
+                
+                if inChordBuild {
+                    if chr == "]" || chr == " "  { //Chord end
+                        
+                        //See if we are to close to the last chord??
+
+                        
+                        let vChord = chordName //NO - PUT A SPACE IN FRONT OF THE CHORD ?????
+                        vChordWidth = SizeOfString(myString: vChord,font: chordFont)
+
+                        //Subtract on from the vChordAboceChar to force the insert before the character above
+                        let currentChord = LyricChords(chord: vChord, chordAboveChar: vNextChordPosition,chordAboveCharSize: 0 ,chordWidth: vChordWidth, nextChordClose: false)
+                        
+                        chords.append(currentChord)
+                        inChordBuild = false
+                        
+                        //Reset the chord name
+                        chordName = ""
+                        
+                    } else { //Create the chord name, add all the charaters between [ and ] (or a space)
+                        chordName.append(chr)
+                        //Need to add one to the location to account for each character
+                        vChordAboveChar += 1
+                    }
+                }else { // Not building a chord
+                    if chr == "[" {
+                        inChordBuild = true
+                        vNextChordPosition = vChordAboveChar //Holder for the chord position upon discovery
+                        
+                    }else {// Here is where we create the unformatted lyrics (no chords)
+                        //Need to add one to the location to account for each character
+                        vChordAboveChar += 1
+                        lyricLine.append(chr)
+                    }
+                }
+  
+            }
+        //print (lyricLine)
+        return (chords, lyricLine)
+            
+    }
     
+    
+    func setChordCloseFlag() {
+        
+        for data in lyrics {
+            for x in data.lineChords.indices.reversed() {
+                
+                if x > 0 {
+                    let chord = data.lineChords[x]
+                    let previousChord = data.lineChords[x-1]
+                    
+                    if chord.chordAboveChar <= previousChord.chordAboveChar + chord.chord.characters.count {
+                        previousChord.nextChordClose = true
+                    }
+                }
+                
+            }
+        }
+    }
+    
+    
+    func spacesNeeded(spaceCount: Int) -> String {
+        
+        let space = ""
+        let paddedSpace = space.padding(toLength: spaceCount, withPad: "@", startingAt: 0)
+        return paddedSpace
+        
+        
+    }
+
+    func spacesNeeded(len:CGFloat) -> (String, Int) {
+        //Return a string of spaces and a number of spaces
+        
+        var spaceNeeded = 0
+        let NewSpace = NSMutableAttributedString(string: " ", attributes: lyricAttr)
+        let width = (NewSpace as NSMutableAttributedString).size().width
+        
+
+        spaceNeeded = Int(len / width)
+        let eString = ""
+        
+        let paddedString = eString.padding(toLength: spaceNeeded, withPad: "@", startingAt: 0)
+        
+        return (paddedString, spaceNeeded)
+        
+        
+    }
+
+    func spacesNeeded(pos:CGFloat,endPos:CGFloat, chordLine: String) -> String {
+        
+        var spaceNeeded = 0
+        let NewSpace = NSMutableAttributedString(string: " ", attributes: chordAttr)
+        let width = (NewSpace as NSMutableAttributedString).size().width
+
+        if pos >= endPos {
+            spaceNeeded = Int((pos-endPos) / width)
+        }else {
+            spaceNeeded = 1 //Add at least on space for now
+        }
+        let chord = ""
+
+        let paddedChord = chord.padding(toLength: spaceNeeded, withPad: " ", startingAt: 0)
+        
+        return paddedChord
+        
+        
+    }
     
     
     func seperateWordsFromLyric(_myLyric: String) -> (Array<LyricWords>) {
-
+        
         enum wordBuild {
             
             case beginWord
@@ -211,102 +367,29 @@ class DataParser {
             lyricLine.append(chr)
             
         }
-         
+        
         //Flush the last word -
         //print(wordName)
         if wordName.characters.count > 0 {
             let currentWord = LyricWords(word: wordName, wordPosition: vWordPosition)
             words.append(currentWord)
         }
-
+        
         return (words)
-            
-        }
-        
-        
-    func seperateChordsFromLyrics(_ myLyric: String) -> (Array<LyricChords>, String) {
-        
-            var inChordBuild = false
-            var chordName = ""
-            var lyricLine = ""
-            var chords  = [LyricChords]()
-            var vChordAboveChar: Int = 0
-            var vChordAboveCharSize:CGFloat = 0
-            var vChordWidth:CGFloat = 0
-            var vChordPosition:CGFloat = 0
-            var vChordEndPosition:CGFloat = 0
-            var vPreviousChordEndPosition:CGFloat = 0
-
-
-            for (x ,chr) in myLyric.characters.enumerated() {
-                
-                if inChordBuild {
-                    if chr == "]" || chr == " "  { //Chord end
-                        let vChord = chordName //NO - PUT A SPACE IN FRONT OF THE CHORD ?????
-                        vChordWidth = SizeOfString(myString: vChord,font: chordFont)
-
-                        //Subtract on from the vChordAboceChar to force the insert before the character above
-                        let currentChord = LyricChords(chord: vChord, chordAboveChar: vChordAboveChar-1,chordAboveCharSize: vChordAboveCharSize ,chordWidth: vChordWidth,chordPosition: vChordPosition, chordEndPosition:vChordEndPosition)
-                        
-                        chords.append(currentChord)
-                        inChordBuild = false
-                        
-                        //This is the chord
-                        //The is the line up to the point where the chord goes
-                        chordName = ""
-                        
-                    } else { //Create the chord name, add all the charaters between [ and ] (or a space)
-                        chordName.append(chr)
-                    }
-                }else { // Not building a chord
-                    if chr == "[" {
-                        inChordBuild = true
-                        vPreviousChordEndPosition = vChordEndPosition
-                        vChordPosition = SizeOfString(myString: lyricLine,font: lyricFont) //for now
-                        //Need to add one to the location to account for the single character space take up by the chord
-                        vChordAboveChar += 1
-                        
-                    }else {// Here is where we create the unformatted lyrics (no chords)
-                        //Need to add one to the location to account for each character
-                        vChordAboveChar += 1
-                        lyricLine.append(chr)
-                    }
-                }
-  
-            }
-        //print (lyricLine)
-        return (chords, lyricLine)
-            
-    }
-    
-    func spacesNeeded(pos:CGFloat,endPos:CGFloat, chordLine: String) -> String {
-        
-        var spaceNeeded = 0
-        let NewSpace = NSMutableAttributedString(string: " ", attributes: chordAttr)
-        let width = (NewSpace as NSMutableAttributedString).size().width
-
-        if pos >= endPos {
-            spaceNeeded = Int((pos-endPos) / width)
-        }else {
-            spaceNeeded = 1 //Add at least on space for now
-        }
-        let chord = ""
-
-        let paddedChord = chord.padding(toLength: spaceNeeded, withPad: " ", startingAt: 0)
-        
-        return paddedChord
-        
         
     }
-    
     func subStringByRange(myString: String, begin:Int, length: Int) -> String {
+
+        if myString.characters.count > begin+length { // We are out of range
         
-        let start = myString.index(myString.startIndex, offsetBy: begin)
-        let end = myString.index(myString.startIndex, offsetBy: begin+length)
-        let range = start..<end
-        
-        return myString.substring(with: range)  // play
-        
+            let start = try myString.index(myString.startIndex, offsetBy: begin)
+            let end = try myString.index(myString.startIndex, offsetBy: begin+length)
+            let range = start..<end
+            return myString.substring(with: range)
+        } else {
+        return ""
+    }
+    
         
     }
     func SizeOfString(myString: String, font: NSFont) -> CGFloat {
@@ -347,127 +430,4 @@ class DataParser {
         }
     }
 }
-
-
-//    func getLyrics() -> NSAttributedString {
-//
-//        let lineFeed: NSAttributedString = NSAttributedString(string: "\n")
-//        let returnLyrics = NSMutableAttributedString()
-//        var mString: NSMutableAttributedString!
-//
-//
-//        for data in lyrics {
-//            //Traverse each line and parse out the word and chords
-//
-//            switch data.lineType {
-//
-//            case .Lyrics:
-//
-//
-////                if data.lineChords.count > 0 { //Write the chord line
-////
-////                    var vPreviousChordEnd: CGFloat = 0
-////                    var chordLine = ""
-////                    for chord in data.lineChords {
-////                        //print ("Chord Pos: \(chord.chordPosition, chord.chord)")
-////                        //print ("Chord End Pos: \(chord.chordEndPosition, chord.chord)")
-////                        chordLine.append(spacesNeeded(pos: chord.chordPosition,endPos: vPreviousChordEnd,chordLine: chordLine))
-////                        chordLine.append(chord.chord)
-////                        vPreviousChordEnd = chord.chordEndPosition //Save the ending position of the chord for the next chords position
-////                    }
-////
-////                    mString = NSMutableAttributedString(string: chordLine, attributes: chordAttr)
-////                    returnLyrics.append(mString)
-////                    returnLyrics.append(lineFeed)
-////
-////
-////                }
-//
-//                    mString = NSMutableAttributedString(string: data.lineFormated, attributes: lyricAttr)
-//                    returnLyrics.append(lineFeed)
-//                    returnLyrics.append(mString)
-//
-//
-//
-//
-//            case .Title:
-//                    returnLyrics.append(lineFeed)
-//            case .SubTitle:
-//                    returnLyrics.append(lineFeed)
-//            default:
-//                    returnLyrics.append(lineFeed)
-//
-//            }
-//
-//        }
-//
-//        let paragraphStyle = NSMutableParagraphStyle()
-//        //paragraphStyle.lineHeightMultiple = 2.0
-//        paragraphStyle.lineSpacing = 20
-//        returnLyrics.addAttribute(NSParagraphStyleAttributeName, value:paragraphStyle, range:NSMakeRange(0, returnLyrics.length))
-//
-//        return returnLyrics
-//
-//    }
-//
-//    func getChords() -> NSAttributedString {
-//
-//        let lineFeed: NSAttributedString = NSAttributedString(string: "\n")
-//        let returnChords = NSMutableAttributedString()
-//        var mString: NSMutableAttributedString!
-//
-//
-//        for data in lyrics {
-//            //Traverse each line and parse out the word and chords
-//
-//            switch data.lineType {
-//
-//            case .Lyrics:
-//
-//
-//                if data.lineChords.count > 0 { //Write the chord line
-//
-//                    var vPreviousChordEnd: CGFloat = 0
-//                    var chordLine = ""
-//                    for chord in data.lineChords {
-//                        //print ("Chord Pos: \(chord.chordPosition, chord.chord)")
-//                        //print ("Chord End Pos: \(chord.chordEndPosition, chord.chord)")
-//                        chordLine.append(spacesNeeded(pos: chord.chordPosition,endPos: vPreviousChordEnd,chordLine: chordLine))
-//                        chordLine.append(chord.chord)
-//                        vPreviousChordEnd = chord.chordEndPosition //Save the ending position of the chord for the next chords position
-//                    }
-//
-//                    mString = NSMutableAttributedString(string: chordLine, attributes: chordAttr)
-//                    returnChords.append(mString)
-//                    //Added a char to the line to make it equal to the length of the lyric line
-//
-//                    returnChords.append(lineFeed)
-//
-//
-//
-//                }
-//
-//            case .Title:
-//                returnChords.append(lineFeed)
-//            case .SubTitle:
-//                returnChords.append(lineFeed)
-//            default:
-//                returnChords.append(lineFeed)
-//
-//            }
-//
-//        }
-//
-//
-//
-//        let d = lyricFont.pointSize / chordFont.pointSize
-//        let paragraphStyle = NSMutableParagraphStyle()
-//        //paragraphStyle.lineHeightMultiple = 2.0
-//        paragraphStyle.lineSpacing = d * 20
-//        returnChords.addAttribute(NSParagraphStyleAttributeName, value:paragraphStyle, range:NSMakeRange(0, returnChords.length))
-//
-//        return returnChords
-//
-//    }
-
 

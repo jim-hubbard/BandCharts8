@@ -732,7 +732,7 @@
                                                     <rect key="frame" x="1" y="1" width="514" height="535"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
-                                                        <textView importsGraphics="NO" usesFontPanel="YES" findStyle="panel" continuousSpellChecking="YES" allowsDocumentBackgroundColorChange="YES" allowsUndo="YES" usesRuler="YES" allowsNonContiguousLayout="YES" quoteSubstitution="YES" dashSubstitution="YES" spellingCorrection="YES" smartInsertDelete="YES" id="vez-KX-a1h">
+                                                        <textView importsGraphics="NO" usesFontPanel="YES" findStyle="panel" allowsDocumentBackgroundColorChange="YES" usesRuler="YES" allowsNonContiguousLayout="YES" id="vez-KX-a1h">
                                                             <rect key="frame" x="0.0" y="0.0" width="514" height="535"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
